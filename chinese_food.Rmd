@@ -14,11 +14,11 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, comment = NA, cache.lazy = F
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ggplot2))
 ```
-It's Christmas, and that means two things for Jews around America: going to the movies, and getting Chinese food. A [recent article](https://www.vox.com/the-goods/2018/12/21/18151903/history-jews-chinese-food-christmas-kosher-american) suggests that Jews have been frequenting Chinese restaurants for over 100 years, likely originating from the proximity between the two in the Lower East Side, Manhattan (as a Jew who spent years living in LES, I can confidently say that hasn't changed).
+It's Christmas, and that means two things for Jews around America: going to the movies, and getting Chinese food. A [recent article](https://www.vox.com/the-goods/2018/12/21/18151903/history-jews-chinese-food-christmas-kosher-american) suggests that Jews have been frequenting Chinese restaurants for over 100 years, likely originating from the proximity between the two groups in the Lower East Side of Manhattan. As a Jew who spent years living in LES, I can confidently say that hasn't changed. 
 <br><br>
 This year I'm out-of-town in California for Christmas, so I had to consult Yelp for options to find a Chinese place. I think this is just a personal thing, but on this day I typically prefer the cheaper Chinese takeout over a nicer (perhaps more authentic) sit-down experience. I started calling the nearby restaurants, and finally found one that was open. It's a place named "Great Wall". Over orange chicken, I mused with my fiancée about how many Chinese restaurants seem to have that name. 
 <br><br>
-Thanks to the power of the Yelp API, my stupid question became a solvable problem. I gathered a list of Chinese restaurants from 1,000 cities in the country; from New York, New York to Wheeling, Illinois. With information on over 33,000 restaurants, I sought answers to my questions[^1][^2]. 
+Thanks to the power of the Yelp API, my stupid question became a solvable problem. I gathered a list of Chinese restaurants from 1,000 cities in the country; from New York, New York to Wheeling, Illinois. With information on over 33,000 restaurants, I sought answers to my questions[^1] [^2]. 
 
 ```{r prep, include=FALSE, cache=TRUE}
 names <- readRDS("names.RDS")
@@ -32,7 +32,7 @@ all_cities$edit <- trimws(gsub("restaurant", "", gsub("chinese", "", gsub("of", 
 
 Not nearly as many as I imagined. Only about 1% of Chinese restaurants have the name "Great Wall" in them. This includes names like the well-represented "Great Wall Chinese Restaurant" as well as less common names like "Great Wall No III" and "Great Wall Express 11".
 
-There are also a number of restaurants with "Great" but not "Wall", and vice versa. These restaurants account for only 0.5% of the total, but include standouts such as Jimmy's Great China Restaurant. 
+There are also a number of restaurants with "Great" but not "Wall", and vice versa. These restaurants account for only 0.5% of the total, but include standouts such as Jimmy's Great China Restaurant.
 
 ### So what *are* the most common Chinese restaurant names###
 Not as straightforward to answer as it seems, since many resaurant names are similar with minor differences ("Great Wall" vs "The Great Wall" vs "Great Wall Chinese"). After accounting for many of these similarities, we're left with the following list:
@@ -49,7 +49,7 @@ print(all_cities %>%
       row.names=FALSE)
 ```
 
-Surprising no one, Panda Express tops the list. They've got around 2,000 US locations. Also on the top 10 list is the chain P.F. Chang's (and Pei Wei gets honorary mention at #11). 
+Surprising no one, Panda Express tops the list, accounting for over 5% of all Chinese restaurants in America. They've got around 2,000 US locations. Also on the top 10 list is the chain P.F. Chang's (and Pei Wei gets honorary mention at #11).
 
 ### What are the most common words in Chinese restaurant names###
 
@@ -66,7 +66,7 @@ print(toks %>%
 
 Yup.
 
-If we remove all the Panda Express restaurants (which are causing the words "panda" and "express" to make the top 10), we're left with a similar list. "Express" is *still* popular, coming in at #9, and the word "new" rounds out the top 10. 
+If we remove all the Panda Express restaurants (which are causing the words "panda" and "express" to make the top 10), we're left with a similar list. "Express" is *still* popular, coming in at #9, and the word "new" rounds out the top 10.
 
 Note: similar work was done in 2016 by the [Washington Post](https://www.washingtonpost.com/news/wonk/wp/2016/04/08/we-analyzed-the-names-of-almost-every-chinese-restaurant-in-america-this-is-what-we-learned/?noredirect=on&utm_term=.efb49825379b).
 
@@ -80,8 +80,7 @@ The restaurants that are generally the most dissimlar to any other given restaur
 ```{r echo=FALSE}
 rs <- rowSums(matt)
 uncommon <- unname(head(names(sort(desc(rs))), 11))
-#writeLines(uncommon[c(1:5, 7:11)])
-print(all_cities[all_cities$name %in% uncommon, c("name", "location")], row.names=FALSE)
+print(all_cities[all_cities$name %in% uncommon, c("name", "location")][c(1:5, 7:11)], row.names=FALSE)
 ```
 
 
@@ -115,13 +114,13 @@ ggplot2::ggplot(city_rating, ggplot2::aes(x=n, y=avg_rating)) +
   theme_classic()
 ```
 
-A higher density of Chinese restaurants leads to a higher average rating (after the inflection point at 250). There's an artifical cutoff at 1,000 restaurants per location (thanks, Yelp), so maybe the curve is actually less drastic. But either way, the trend is there. The higher quality is likely an effect of the increased competition. 
+A higher density of Chinese restaurants leads to a higher average rating (after the inflection point at 250). There's an artifical cutoff at 1,000 restaurants per location (thanks, Yelp), so maybe the curve is actually less drastic. But either way, the trend is there. The higher quality is likely an effect of the increased competition.
 
 ### The highest rated words ###
 
-Are restaurants with certain words in their name rated higher than other restaurants? The list of "top rated words" contain "Roast", "Veggie", "Meat", "Snack", "Boiling", and "Hainan" (a province in China). These restaurants rate from 4.2 - 4.4 stars (sd = .63). The theme with all these words is "descriptive". The name tells you the type of food you'll be eating. This is in stark contrast to the lowest ranked words.
+Are restaurants with certain words in their name rated higher than other restaurants? The list of "top rated words" contain "Roast", "Veggie", "Meat", "Snack", "Boiling", and "Hainan" (a province in China). These restaurants rate from 4.2 - 4.4 stars (sd = .63). The theme with all these words is "descriptive". The name tells you the type of food you'll be eating. Compare that to the list of lowest ranks words.
 
-That list includes "buffet", "lights", "unique", and "real". Ratings for restaurants with these words are between 2.3 - 2.6 stars (sd = .63). It's safe to say the theme with the low ranking words is "ingenuity". The names try to lure customers in, captivating them with surface level features to make up for the lower quality. 
+That list includes "buffet", "lights", "unique", and "real". Ratings for restaurants with these words are between 2.3 - 2.6 stars (sd = .63). It's safe to say the theme with the low ranking words is "fluff". The names try to lure customers in, captivating them with flowery words to make up for the lower quality.
 
 And in case you're curious, "Great Wall" restaurants average a 3.2 rating. 
 
