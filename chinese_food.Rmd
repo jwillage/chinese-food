@@ -1,0 +1,131 @@
+---
+title: "chinese_food"
+output: 
+  html_document: 
+    keep_md: yes
+    #df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, comment = NA, cache.lazy = FALSE,  opts.label="kill_prefix")
+```
+
+```{r, include=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+It's Christmas, and that means two things for Jews around America: going to the movies, and getting Chinese food. A [recent article](https://www.vox.com/the-goods/2018/12/21/18151903/history-jews-chinese-food-christmas-kosher-american) suggests that Jews have been frequenting Chinese restaurants for over 100 years, likely originating from the proximity between the two in the Lower East Side, Manhattan (as a Jew who spent years living in LES, I can confidently say that hasn't changed).
+<br><br>
+This year I'm out-of-town in California for Christmas, so I had to consult Yelp for options to find a Chinese place. I think this is just a personal thing, but on this day I typically prefer the cheaper Chinese takeout over a nicer (perhaps more authentic) sit-down experience. I started calling the nearby restaurants, and finally found one that was open. It's a place named "Great Wall". Over orange chicken, I mused with my fiancée about how many Chinese restaurants seem to have that name. 
+<br><br>
+Thanks to the power of the Yelp API, my stupid question became a solvable problem. I gathered a list of Chinese restaurants from 1,000 cities in the country; from New York, New York to Wheeling, Illinois. With information on over 33,000 restaurants, I sought answers to my questions[^1][^2]. 
+
+```{r prep, include=FALSE, cache=TRUE}
+names <- readRDS("names.RDS")
+matt <- readRDS("dist_mat.RDS")
+all_cities <- names %>% distinct(id, .keep_all = T)
+all_cities$edit <- trimws(gsub("restaurant", "", gsub("chinese", "", gsub("of", "", gsub("the", "", all_cities$name, ignore.case = T), ignore.case = T), ignore.case = T), ignore.case = T))
+
+```
+
+### How many restaurants are named "Great Wall"###
+
+Not nearly as many as I imagined. Only about 1% of Chinese restaurants have the name "Great Wall" in them. This includes names like the well-represented "Great Wall Chinese Restaurant" as well as less common names like "Great Wall No III" and "Great Wall Express 11".
+
+There are also a number of restaurants with "Great" but not "Wall", and vice versa. These restaurants account for only 0.5% of the total, but include standouts such as Jimmy's Great China Restaurant. 
+
+### So what *are* the most common Chinese restaurant names###
+Not as straightforward to answer as it seems, since many resaurant names are similar with minor differences ("Great Wall" vs "The Great Wall" vs "Great Wall Chinese"). After accounting for many of these similarities, we're left with the following list:
+
+```{r echo=FALSE}
+print(all_cities %>% 
+        group_by(edit) %>% 
+        summarize(n=n(), 
+                  percent=paste0(round(n/nrow(all_cities)*100, 2), "%")) %>% 
+        arrange(desc(n)) %>% 
+        rename(name=edit) %>%
+        head(10) %>%
+        as.data.frame(),
+      row.names=FALSE)
+```
+
+Surprising no one, Panda Express tops the list. They've got around 2,000 US locations. Also on the top 10 list is the chain P.F. Chang's (and Pei Wei gets honorary mention at #11). 
+
+### What are the most common words in Chinese restaurant names###
+
+```{r echo=FALSE}
+toks <- tidytext::unnest_tokens(all_cities, word, name)
+print(toks %>% 
+  count(word) %>% 
+  arrange(desc(n)) %>% 
+  mutate(percent = paste0(round(n/nrow(all_cities)*100, 2), "%")) %>%
+  as.data.frame() %>%
+  head(10),
+  row.names=FALSE)
+```
+
+Yup.
+
+If we remove all the Panda Express restaurants (which are causing the words "panda" and "express" to make the top 10), we're left with a similar list. "Express" is *still* popular, coming in at #9, and the word "new" rounds out the top 10. 
+
+Note: similar work was done in 2016 by the [Washington Post](https://www.washingtonpost.com/news/wonk/wp/2016/04/08/we-analyzed-the-names-of-almost-every-chinese-restaurant-in-america-this-is-what-we-learned/?noredirect=on&utm_term=.efb49825379b).
+
+### The most uncommon restaurant names###
+This is a fun one. I lived in Jacksonville for a couple years and remember always driving by Ying's Chinee Takee Outee. That's really their name. I wondered what other Chinese restaurants have funny or weird names. But that's a hard question to answer (lmk if you have an easy way to do that). A more practical problem is to find the most uncommon names. To do this, I calculated how similar any name is to any other name[^3]. The list had a lot of Chinese characters, but it also had some interesting English ones. 
+
+First, the two restaurants that have the **most** dissimilar names to each other: "XIN" and "Pearl Chinese Restaurant Plus Carrier Chicken & Seafood". I haven't scanned the entire list of tens of thousands of restaurants, but that's pretty convincing. 
+
+The restaurants that are generally the most dissimlar to any other given restaurant name are the following, in order:
+
+```{r echo=FALSE}
+rs <- rowSums(matt)
+uncommon <- unname(head(names(sort(desc(rs))), 11))
+#writeLines(uncommon[c(1:5, 7:11)])
+print(all_cities[all_cities$name %in% uncommon, c("name", "location")], row.names=FALSE)
+```
+
+
+### Is there anything telling about ratings?###
+The average rating among all Chinese restaurants is 3.4 stars. Here's the distribution for all ratings.
+
+```{r distr, echo = FALSE, fig.height=1}
+all_cities %>% 
+  count(rating) %>% 
+  filter(rating > 0) %>% 
+  ggplot(aes(x=as.character(rating), y=n)) + 
+  geom_bar(stat="identity") +
+  scale_x_discrete(name="Rating") +
+  theme_classic() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.line.y = element_blank()) 
+```
+
+Nothing too interesting there. But as it turns out, there's a weird relationship between a city's average Chinese restaurant rating and the number of restaurants in that city. Consider the following image:
+
+```{r echo=FALSE}
+names <- readRDS("names.RDS")
+city_rating <- dplyr::summarize(dplyr::group_by(names, location), n=dplyr::n(), avg_rating=mean(rating))
+ggplot2::ggplot(city_rating, ggplot2::aes(x=n, y=avg_rating)) + 
+  ggplot2::geom_point(ggplot2::aes(x=n, y=avg_rating)) + 
+  ggplot2::stat_smooth(formula = y ~x+I(x^2), method="lm") +
+  scale_y_continuous(name="Average Rating") +
+  scale_x_continuous(name="Number of Restaurants in Location") +
+  theme_classic()
+```
+
+A higher density of Chinese restaurants leads to a higher average rating (after the inflection point at 250). There's an artifical cutoff at 1,000 restaurants per location (thanks, Yelp), so maybe the curve is actually less drastic. But either way, the trend is there. The higher quality is likely an effect of the increased competition. 
+
+### The highest rated words ###
+
+Are restaurants with certain words in their name rated higher than other restaurants? The list of "top rated words" contain "Roast", "Veggie", "Meat", "Snack", "Boiling", and "Hainan" (a province in China). These restaurants rate from 4.2 - 4.4 stars (sd = .63). The theme with all these words is "descriptive". The name tells you the type of food you'll be eating. This is in stark contrast to the lowest ranked words.
+
+That list includes "buffet", "lights", "unique", and "real". Ratings for restaurants with these words are between 2.3 - 2.6 stars (sd = .63). It's safe to say the theme with the low ranking words is "ingenuity". The names try to lure customers in, captivating them with surface level features to make up for the lower quality. 
+
+And in case you're curious, "Great Wall" restaurants average a 3.2 rating. 
+
+[^1]: https://www.biggestuscities.com/
+[^2]: Not all Chinese restaurants are accounted for, as data was only pulled for the largest 1,000 US Cities (by population). But the list should be a representative sample of approximately one quarter, judging frrom estimates that there are between 40 and 50 thousand Chinese restaurants in the United States. Assuming names are similar in smaller cities across the country, the sample should be valid. Thus, "absolute" numbers are multiplied by four. 
+[^3]: Distance matrix with resticted DL-distance, via R `stringdist` package. https://cran.r-project.org/web/packages/stringdist/index.html. 
+
